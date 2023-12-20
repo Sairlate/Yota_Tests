@@ -17,6 +17,7 @@ public class Specification {
                 .build();
     }
 
+
     public static ResponseSpecification responseSpecification(int statusCode) {
         return new ResponseSpecBuilder()
                 .expectContentType(ContentType.JSON)

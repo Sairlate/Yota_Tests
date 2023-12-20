@@ -1,12 +1,15 @@
 package org.example.steps;
 
 import io.qameta.allure.Step;
+import io.restassured.http.ContentType;
 import io.restassured.response.Response;
-import org.example.model.customer.CustomerModel;
+import org.example.model.customer.request.CustomerModel;
+import org.example.model.customer.request.StatusModel;
+
+import java.time.format.ResolverStyle;
 
 import static io.restassured.RestAssured.given;
-import static org.example.specification.Specification.requestSpecification;
-import static org.example.specification.Specification.responseSpecification;
+import static org.example.specification.Specification.*;
 
 public class ActivationSteps {
     @Step("Получить список свободных номеров")
@@ -35,14 +38,43 @@ public class ActivationSteps {
     }
 
     @Step("Получить кастомера по ID")
-    public Response getCustomerByID(String token, Integer statusCode, String customer_id) {
+    public Response getCustomerById(String token, Integer statusCode, String customerId) {
         return given()
                 .spec(requestSpecification())
                 .header("authToken", token)
-                .queryParam("?customer_id", customer_id)
+                .queryParam("customerId", customerId)
                 .get("/customer/getCustomerById")
                 .then()
                 .spec(responseSpecification(statusCode))
+                .log().all()
+                .extract()
+                .response();
+    }
+
+    @Step("Поиск кастомера по номеру")
+    public Response getCustomerByPhone(Integer statusCode, String postCustomerByIdRequest){
+        return given()
+                .log().all()
+                .spec(requestSpecification())
+                .contentType(ContentType.XML)
+                .body(postCustomerByIdRequest)
+                .post("/customer/findByPhoneNumber")
+                .then()
+                .spec(responseSpecification(statusCode))
+                .extract()
+                .response();
+    }
+
+    @Step("Поменять статус кастомеру")
+    public Response setCustomerStatus(String token, Integer statusCode,String customerId, StatusModel statusModel){
+        return given()
+                .spec(requestSpecification())
+                .header("authToken", token)
+                .body(statusModel)
+                .pathParam("customerId", customerId)
+                .post("/customer/{customerId}/changeCustomerStatus")
+                .then()
+                .statusCode(statusCode)
                 .extract()
                 .response();
     }
