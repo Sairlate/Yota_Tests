@@ -1,0 +1,7 @@
+<suite name="Parallel Test Suite" parallel="methods">
+    <test name="Activation Tests">
+        <classes>
+            <class name="activationTests.ActivationTests"/>
+        </classes>
+    </test>
+</suite>

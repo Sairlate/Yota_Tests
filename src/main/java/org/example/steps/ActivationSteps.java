@@ -15,6 +15,7 @@ public class ActivationSteps {
     @Step("Получить список свободных номеров")
     public Response getEmptyNumbers(String token, Integer statusCode){
         return given()
+                .log().all()
                 .spec(requestSpecification())
                 .header("authToken", token)
                 .get("/simcards/getEmptyPhone")
@@ -27,6 +28,7 @@ public class ActivationSteps {
     @Step("Создать нового кастомера")
     public Response createNewCustomer(String token, Integer statusCode, CustomerModel customerModel){
         return given()
+                .log().all()
                 .spec(requestSpecification())
                 .header("authToken", token)
                 .body(customerModel)
@@ -40,13 +42,13 @@ public class ActivationSteps {
     @Step("Получить кастомера по ID")
     public Response getCustomerById(String token, Integer statusCode, String customerId) {
         return given()
+                .log().all()
                 .spec(requestSpecification())
                 .header("authToken", token)
                 .queryParam("customerId", customerId)
                 .get("/customer/getCustomerById")
                 .then()
                 .spec(responseSpecification(statusCode))
-                .log().all()
                 .extract()
                 .response();
     }
@@ -68,6 +70,7 @@ public class ActivationSteps {
     @Step("Поменять статус кастомеру")
     public Response setCustomerStatus(String token, Integer statusCode,String customerId, StatusModel statusModel){
         return given()
+                .log().all()
                 .spec(requestSpecification())
                 .header("authToken", token)
                 .body(statusModel)

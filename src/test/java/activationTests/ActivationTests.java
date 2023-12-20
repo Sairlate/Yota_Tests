@@ -23,7 +23,7 @@ public class ActivationTests extends BaseTest {
     private static final XmlMapper XML_MAPPER = new XmlMapper();
 
 
-    @Test(description = "Тест на полный цикл активации пользователя", retryAnalyzer = RetryAnalyzer.class)
+    @Test(description = "Тест на полный цикл активации пользователя", retryAnalyzer = RetryAnalyzer.class, invocationCount = 1, threadPoolSize = 3)
     public void activateCustomer() throws JsonProcessingException, InterruptedException {
         //Авторизация под одним из пользователей
         login("admin", "password");
@@ -68,6 +68,78 @@ public class ActivationTests extends BaseTest {
         GetCustomerStatusResponse xmlResponse = XML_MAPPER.readValue(savedCustomer.getBody().asString(), GetCustomerStatusResponse.class);
         String customerIdXml = xmlResponse.getResponseBody().getCustomerId();
         Assert.assertEquals(customerId, customerIdXml);
+
+        //Изменение статуса
+        String status = StringBuilder.genLatin(5);
+        Response changeStatus = ACTIVATION_STEPS.setCustomerStatus(token, 200, customerId,
+                new StatusModel().withStatus(status));
+        Response changedCustomerStatus = ACTIVATION_STEPS.getCustomerById(token, 200, customerId);
+
+        //Ожидание, что статус поменялся
+        Assert.assertEquals(changedCustomerStatus.getBody().as(CustomerResponse.class),
+                new CustomerResponse().withCustomerReturn(new Return().withName(customerName).withCustomerId(customerId).withStatus(status)
+                        .withPhone(phone).withPd(passport).withAdditionalParameters(additionalParameter)));
+    }
+
+    @Test(description = "Тест на смену статуса юзером", retryAnalyzer = RetryAnalyzer.class, invocationCount = 1, threadPoolSize = 3)
+    public void changeStatusByUser() throws JsonProcessingException{
+        //Авторизация под одним из пользователей
+        login("user", "password");
+
+        //Получение списка свободных номеров для дальнейшего использования
+        Response number = ACTIVATION_STEPS.getEmptyNumbers(token, 200);
+
+        //Создание нового кастомера, используя один из доступеных номеров
+        AdditionalParameters additionalParameter = new AdditionalParameters().withString("string");
+        String customerName = StringBuilder.genLatin(7);
+        PhonesModel phonesModel = OBJECT_MAPPER.readValue(number.getBody().asString(), PhonesModel.class);
+        Long phone = phonesModel.getPhones().get(0).getPhone();
+        CustomerModel customerModel = new CustomerModel().withName(customerName).withPhone(phone).
+                withAdditionalParameters(additionalParameter);
+        Response createdCustomer = ACTIVATION_STEPS.createNewCustomer(token, 200, customerModel);
+
+        //Получение созданного кастомера
+        ObjectNode node = OBJECT_MAPPER.readValue(createdCustomer.getBody().asString(), ObjectNode.class);
+        String customerId = node.get("id").asText();
+        Response existingCustomer = ACTIVATION_STEPS.getCustomerById(token, 200, customerId);
+        CustomerResponse customerResponse = OBJECT_MAPPER.readValue(existingCustomer.getBody().asString(), CustomerResponse.class);
+        String passport = customerResponse.getCustomerReturn().getPd();
+
+        //Изменение статуса
+        String status = StringBuilder.genLatin(5);
+        Response changeStatus = ACTIVATION_STEPS.setCustomerStatus(token, 401, customerId,
+                new StatusModel().withStatus(status));
+        Response changedCustomerStatus = ACTIVATION_STEPS.getCustomerById(token, 200, customerId);
+
+        //Ожидание, что статус не поменялся
+        Assert.assertNotEquals(changedCustomerStatus.getBody().as(CustomerResponse.class),
+                new CustomerResponse().withCustomerReturn(new Return().withName(customerName).withCustomerId(customerId).withStatus(status)
+                        .withPhone(phone).withPd(passport).withAdditionalParameters(additionalParameter)));
+    }
+
+    @Test(description = "Тест на смену статуса админом", retryAnalyzer = RetryAnalyzer.class, invocationCount = 1, threadPoolSize = 3)
+    public void changeStatusByAdmin() throws JsonProcessingException{
+        //Авторизация под одним из пользователей
+        login("admin", "password");
+
+        //Получение списка свободных номеров для дальнейшего использования
+        Response number = ACTIVATION_STEPS.getEmptyNumbers(token, 200);
+
+        //Создание нового кастомера, используя один из доступеных номеров
+        AdditionalParameters additionalParameter = new AdditionalParameters().withString("string");
+        String customerName = StringBuilder.genLatin(7);
+        PhonesModel phonesModel = OBJECT_MAPPER.readValue(number.getBody().asString(), PhonesModel.class);
+        Long phone = phonesModel.getPhones().get(0).getPhone();
+        CustomerModel customerModel = new CustomerModel().withName(customerName).withPhone(phone).
+                withAdditionalParameters(additionalParameter);
+        Response createdCustomer = ACTIVATION_STEPS.createNewCustomer(token, 200, customerModel);
+
+        //Получение созданного кастомера
+        ObjectNode node = OBJECT_MAPPER.readValue(createdCustomer.getBody().asString(), ObjectNode.class);
+        String customerId = node.get("id").asText();
+        Response existingCustomer = ACTIVATION_STEPS.getCustomerById(token, 200, customerId);
+        CustomerResponse customerResponse = OBJECT_MAPPER.readValue(existingCustomer.getBody().asString(), CustomerResponse.class);
+        String passport = customerResponse.getCustomerReturn().getPd();
 
         //Изменение статуса
         String status = StringBuilder.genLatin(5);
